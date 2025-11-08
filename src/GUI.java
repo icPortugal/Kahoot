@@ -1,10 +1,10 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.List;
 
 public class GUI extends JFrame {
     private GameState gameState;
-    private JFrame frame;
     private JLabel questionLabel;
     private JRadioButton[] options;
     private ButtonGroup optionsGroup;
@@ -14,7 +14,7 @@ public class GUI extends JFrame {
     public GUI(GameState gameState) {
         this.gameState = gameState;
 
-        //Janela
+        //janela
         setTitle("Kahoot");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); //no futuro ver se não faz sentido:HIDE_ON_CLOSE
@@ -22,13 +22,13 @@ public class GUI extends JFrame {
 
 
         //parte da pergunta
-        questionLabel = new JLabel();
+        questionLabel = new JLabel("", SwingConstants.CENTER);
         questionLabel.setFont(new Font("Arial", Font.PLAIN, 15));
-        questionLabel.setHorizontalAlignment(JTextField.RIGHT);
+        add(questionLabel, BorderLayout.NORTH);
 
         //parte das opções
-        JPanel optionsPanel = new JPanel();
-        options =new JRadioButton[4];
+        JPanel optionsPanel = new JPanel(new GridLayout(4, 1, 5, 5));
+        options = new JRadioButton[4];
         optionsGroup = new ButtonGroup(); //para só dar para marcar um de cada vez
         for (int i = 0; i < 4; i++) {
             options[i] = new JRadioButton();
@@ -37,17 +37,78 @@ public class GUI extends JFrame {
             optionsPanel.add(options[i]); //para aparecerem todas as opções
         }
 
-        frame.add(optionsPanel, BorderLayout.WEST);
+        add(optionsPanel, BorderLayout.CENTER);
+
+        //botão submit
+        JPanel submit = new JPanel(new BorderLayout());
+        submitButton = new JButton("Submit");
+        submitButton.setFont(new Font("Arial", Font.PLAIN, 15));
+        submitButton.addActionListener(this::onSubmit);
+        submit.add(submitButton, BorderLayout.CENTER);
 
         //pontuação
         scoreLabel = new JLabel("Pontuação: 0", SwingConstants.CENTER);
+        submit.add(scoreLabel, BorderLayout.NORTH);
 
         //enviar resposta
+        add(submit, BorderLayout.SOUTH);
 
+        loadCurrentQuestion();
 
+        setVisible(true);
 
+    }
 
+    private void loadCurrentQuestion() {
+        Question question = gameState.getCurrentQuestion();
+        if(question == null) {
+            questionLabel.setText("Sem perguntas.");
+            submitButton.setEnabled(false);
+            return;
+        }
 
+        // mostrar opções no ecrã
+        questionLabel.setText(question.getQuestion());
+        List<String> opts = question.getOptions();
+        for (int i = 0; i < options.length; i++) {
+            if (i < opts.size()) {
+                options[i].setText(opts.get(i));
+                options[i].setVisible(true);
+            } else {
+                options[i].setText("");
+                options[i].setVisible(false);
+            }
+        }
+        optionsGroup.clearSelection();
+    }
+
+    private void onSubmit(ActionEvent e) {
+        int selected = -1;
+        for (int i = 0; i < options.length; i++) {
+            if (options[i].isVisible() && options[i].isSelected()) {
+                selected = i; break;
+            }
+        }
+
+        if (selected == -1) {
+            JOptionPane.showMessageDialog(this, "Por favor selecione uma opção antes de submeter.", "Atenção", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int gained = gameState.submitAnswer(selected);
+        if (gained > 0) {
+            JOptionPane.showMessageDialog(this, "Correto! +" + gained + " pontos.", "Resultado", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "Errado. 0 pontos.", "Resultado", JOptionPane.INFORMATION_MESSAGE);
+        }
+        scoreLabel.setText("Pontuação: " + gameState.getScore());
+
+        if (gameState.hasNext()) {
+            loadCurrentQuestion();
+        } else {
+            JOptionPane.showMessageDialog(this, "Fim do jogo! Pontuação final: " + gameState.getScore(), "Fim", JOptionPane.PLAIN_MESSAGE);
+            submitButton.setEnabled(false);
+        }
     }
 
 }
