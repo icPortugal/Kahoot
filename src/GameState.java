@@ -26,6 +26,10 @@ public class GameState {
             score += pointsGained;
         }
 
+        if(currentIndex < questions.size() - 1) {
+            currentIndex++;
+        }
+
         return pointsGained;
     }
 
