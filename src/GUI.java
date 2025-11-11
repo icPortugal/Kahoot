@@ -10,13 +10,14 @@ public class GUI extends JFrame {
     private ButtonGroup optionsGroup;
     private JButton submitButton;
     private JLabel scoreLabel;
+    private JLabel timeLabel;
 
     public GUI(GameState gameState) {
         this.gameState = gameState;
 
         //janela
         setTitle("Kahoot");
-        setSize(800, 600);
+        setSize(500, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); //no futuro ver se não faz sentido:HIDE_ON_CLOSE
         setLocationRelativeTo(null);//centrar
 
@@ -39,19 +40,26 @@ public class GUI extends JFrame {
 
         add(optionsPanel, BorderLayout.CENTER);
 
+
+
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+
+        //pontuação + tempo
+        JPanel scoreAndTime = new JPanel(new GridLayout(1, 2));
+        scoreLabel = new JLabel("Pontuação: 0", SwingConstants.CENTER);
+        timeLabel = new JLabel("Tempo: ", SwingConstants.CENTER);
+        scoreAndTime.add(scoreLabel);
+        scoreAndTime.add(timeLabel);
+        bottomPanel.add(scoreAndTime, BorderLayout.NORTH);
+        scoreAndTime.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+
         //botão submit
-        JPanel submit = new JPanel(new BorderLayout());
+        //JPanel submit = new JPanel(new BorderLayout());
         submitButton = new JButton("Submit");
         submitButton.setFont(new Font("Arial", Font.PLAIN, 15));
         submitButton.addActionListener(this::onSubmit);
-        submit.add(submitButton, BorderLayout.CENTER);
-
-        //pontuação
-        scoreLabel = new JLabel("Pontuação: 0", SwingConstants.CENTER);
-        submit.add(scoreLabel, BorderLayout.NORTH);
-
-        //enviar resposta
-        add(submit, BorderLayout.SOUTH);
+        bottomPanel.add(submitButton, BorderLayout.CENTER);
+        add(bottomPanel, BorderLayout.SOUTH);
 
         loadCurrentQuestion();
 
