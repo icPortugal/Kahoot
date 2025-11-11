@@ -10,15 +10,15 @@ public class QuestionLoader {
         try (Reader jsonReader = new FileReader(filename)) {
             Gson gson = new GsonBuilder().create();
 
-            QuizFile quizFile = gson.fromJson(jsonReader, QuizFile.class);
-            if (quizFile == null || quizFile.getQuizzes() == null || quizFile.getQuizzes().isEmpty())
-                return new ArrayList<>();
+            Quiz quiz = gson.fromJson(jsonReader, Quiz.class);
 
-            Quiz selectedQuiz = quizFile.getQuizzes().get(0);
-            if (selectedQuiz.getQuestions() != null)
-                return selectedQuiz.getQuestions();
-            else
+            if (quiz == null || quiz.getQuestions() == null || quiz.getQuestions().isEmpty()) {
+                System.err.println("Nenhuma perguntada encontrada.");
                 return new ArrayList<>();
+            }
+
+            System.out.println("Quiz: " + quiz.getName());
+            return quiz.getQuestions();
 
         } catch (Exception e) {
             e.printStackTrace();
