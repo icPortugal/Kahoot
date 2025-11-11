@@ -17,7 +17,7 @@ public class Question {
     }
 
     public int getCorrectIndex() {
-        return Math.max(0, correct - 1);
+        return correct;
     }
 
     public List<String> getOptions() {
