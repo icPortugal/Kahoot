@@ -8,7 +8,6 @@ public class GUI extends JFrame {
     private JLabel questionLabel;
     private JRadioButton[] options;
     private ButtonGroup optionsGroup;
-    private JButton submitButton;
     private JLabel scoreLabel;
     private JLabel timeLabel;
 
@@ -18,7 +17,7 @@ public class GUI extends JFrame {
         //janela
         setTitle("Kahoot");
         setSize(500, 300);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); //no futuro ver se não faz sentido:HIDE_ON_CLOSE
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
         setLocationRelativeTo(null);//centrar
 
 
@@ -31,18 +30,19 @@ public class GUI extends JFrame {
         JPanel optionsPanel = new JPanel(new GridLayout(4, 1, 5, 5));
         options = new JRadioButton[4];
         optionsGroup = new ButtonGroup(); //para só dar para marcar um de cada vez
+
         for (int i = 0; i < 4; i++) {
+            int index = i;
             options[i] = new JRadioButton();
             options[i].setFont(new Font("Arial", Font.PLAIN, 15));
             optionsGroup.add(options[i]);
             optionsPanel.add(options[i]); //para aparecerem todas as opções
+
+            // alteração pra remover o botão submit
+            options[i].addActionListener(e -> onOptionSelected(index));
         }
 
         add(optionsPanel, BorderLayout.CENTER);
-
-
-
-        JPanel bottomPanel = new JPanel(new BorderLayout());
 
         //pontuação + tempo
         JPanel scoreAndTime = new JPanel(new GridLayout(1, 2));
@@ -50,16 +50,8 @@ public class GUI extends JFrame {
         timeLabel = new JLabel("Tempo: ", SwingConstants.CENTER);
         scoreAndTime.add(scoreLabel);
         scoreAndTime.add(timeLabel);
-        bottomPanel.add(scoreAndTime, BorderLayout.NORTH);
         scoreAndTime.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
-
-        //botão submit
-        //JPanel submit = new JPanel(new BorderLayout());
-        submitButton = new JButton("Submit");
-        submitButton.setFont(new Font("Arial", Font.PLAIN, 15));
-        submitButton.addActionListener(this::onSubmit);
-        bottomPanel.add(submitButton, BorderLayout.CENTER);
-        add(bottomPanel, BorderLayout.SOUTH);
+        add(scoreAndTime, BorderLayout.SOUTH);
 
         loadCurrentQuestion();
 
@@ -71,7 +63,9 @@ public class GUI extends JFrame {
         Question question = gameState.getCurrentQuestion();
         if(question == null) {
             questionLabel.setText("Sem perguntas.");
-            submitButton.setEnabled(false);
+            for(JRadioButton opt : options){
+                opt.setEnabled(false);
+            }
             return;
         }
 
@@ -82,25 +76,19 @@ public class GUI extends JFrame {
             if (i < opts.size()) {
                 options[i].setText(opts.get(i));
                 options[i].setVisible(true);
+                options[i].setEnabled(true);
             } else {
-                options[i].setText("");
                 options[i].setVisible(false);
+                options[i].setEnabled(false);
             }
         }
         optionsGroup.clearSelection();
     }
 
-    private void onSubmit(ActionEvent e) {
-        int selected = -1;
-        for (int i = 0; i < options.length; i++) {
-            if (options[i].isVisible() && options[i].isSelected()) {
-                selected = i; break;
-            }
-        }
+    private void onOptionSelected(int selected) {
 
-        if (selected == -1) {
-            JOptionPane.showMessageDialog(this, "Por favor selecione uma opção antes de submeter.", "Atenção", JOptionPane.WARNING_MESSAGE);
-            return;
+        for (JRadioButton opt : options) {
+            opt.setEnabled(false);
         }
 
         int gained = gameState.submitAnswer(selected);
@@ -115,7 +103,9 @@ public class GUI extends JFrame {
             loadCurrentQuestion();
         } else {
             JOptionPane.showMessageDialog(this, "Fim do jogo! Pontuação final: " + gameState.getScore(), "Fim", JOptionPane.PLAIN_MESSAGE);
-            submitButton.setEnabled(false);
+            for (JRadioButton opt : options) {
+                opt.setEnabled(false);
+            }
         }
     }
 
