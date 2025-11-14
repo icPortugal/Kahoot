@@ -1,0 +1,36 @@
+// ClientHandler.java
+import java.io.*;
+import java.net.Socket;
+
+public class ClientHandler implements Runnable { //para ser corrido nume thread
+
+    private Socket socket;
+
+    public ClientHandler(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        try (
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
+        ) {
+
+            String gameCode = in.readLine();
+            String team = in.readLine();
+            String username = in.readLine();
+
+            System.out.println("Recebido:");
+            System.out.println("Jogo: " + gameCode);
+            System.out.println("Equipa: " + team);
+            System.out.println("Username: " + username);
+
+            if (username == null || username.isBlank())
+                out.println("ERRO: coloque um nome válido");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
