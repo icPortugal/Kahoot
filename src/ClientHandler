@@ -1,36 +1,94 @@
-// ClientHandler.java
 import java.io.*;
 import java.net.Socket;
 
-public class ClientHandler implements Runnable { //para ser corrido nume thread
+public class ClientHandler extends Thread {
+    private Socket connection;
+    private GameState gameState;
 
-    private Socket socket;
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
 
-    public ClientHandler(Socket socket) {
-        this.socket = socket;
+    private String teamId;
+    private String username;
+
+    public ClientHandler(Socket connection, GameState gameState) {
+        this.connection = connection;
+        this.gameState = gameState;
     }
-
     @Override
     public void run() {
-        try (
-                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
-        ) {
+        try {
+            out = new ObjectOutputStream(connection.getOutputStream());
+            in = new ObjectInputStream(connection.getInputStream());
 
-            String gameCode = in.readLine();
-            String team = in.readLine();
-            String username = in.readLine();
+            if (!handleLogin()) {
+                out.writeObject("Falha no registo (username repetido ou equipa inválida).");
+                return;
+            }
 
-            System.out.println("Recebido:");
-            System.out.println("Jogo: " + gameCode);
-            System.out.println("Equipa: " + team);
-            System.out.println("Username: " + username);
+            processGameLoop();
 
-            if (username == null || username.isBlank())
-                out.println("ERRO: coloque um nome válido");
+        } catch (EOFException e) {
+            System.out.println("Cliente " + username + " desconectado.");
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Erro de I/O ou desserialização para " + username + ": " + e.getMessage());
+        } finally {
+            closeConnection();
+        }
+    }
 
-        } catch (Exception e) {
-            e.printStackTrace();
+    private boolean handleLogin() throws IOException, ClassNotFoundException {
+        Object received = in.readObject();
+
+        if (!(received instanceof String[]) || ((String[]) received).length < 3) {
+            out.writeObject("Formato de login inválido.");
+            return false;
+        }
+
+        String[] parts = (String[]) received;
+        this.username = parts[1].trim();
+        this.teamId = parts[2].trim();
+
+        // [Cite: 45] O servidor rejeita se o nome já estiver a ser usado.
+        if (gameState.registerPlayer(this.username, this.teamId)) {
+            // Envia a primeira pergunta para iniciar o jogo (o Cliente está à espera)
+            out.writeObject(gameState.getCurrentQuestion());
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private void processGameLoop() throws IOException, ClassNotFoundException {
+
+        while (true) {
+            Object response = in.readObject();
+
+            if (response instanceof Integer) {
+                int selectedIndex = (int) response;
+
+                int points = gameState.submitAnswer(this.teamId, selectedIndex);
+                out.writeObject("Ganhou " + points + " pontos. Total da equipa: " + gameState.getTeamScore(this.teamId));
+
+                if (gameState.hasNext()) {
+                    out.writeObject(gameState.getCurrentQuestion());
+                } else {
+                    out.writeObject("Fim do jogo: Pontuação Final: " + gameState.getTeamScore(this.teamId));
+                    break;
+                }
+            } else {
+                out.writeObject("Resposta inválida.");
+            }
+        }
+    }
+
+    public void closeConnection() {
+        try {
+            if (out != null) out.close();
+            if (in != null) in.close();
+            if (connection != null) connection.close();
+        } catch (IOException e) {
+            System.err.println("Erro ao fechar conexão para " + username);
         }
     }
 }
