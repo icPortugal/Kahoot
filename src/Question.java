@@ -1,6 +1,6 @@
 import java.util.List;
-
-public class Question {
+import java.io.Serializable;
+public class Question implements Serializable {
     private String question;
     private int points;
     private int correct;

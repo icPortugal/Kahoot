@@ -1,15 +1,31 @@
+import java.io.IOException;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        List<Question> perguntas = QuestionLoader.loadFromFile("perguntas.json");
+        if (args.length < 5) {
+            System.err.println("Uso: java Main <IP> <PORT> <Jogo> <Equipa> <Username>");
+            System.exit(1);
+            return;
+        }
 
-        if(perguntas == null || perguntas.isEmpty()) {
-            System.err.println("Sem perguntas. Verifique o ficheiro perguntas.json");
+        String serverAddress = args[0];
+        int port = Integer.parseInt(args[1]);
+        String gameCode = args[2];
+        String teamId = args[3];
+        String username = args[4];
+
+        // tenta conexão
+        try {
+            new GUI(serverAddress, port, username, teamId);
+        } catch (IOException e) {
+            System.err.println("Erro ao conectar ao servidor em " + serverAddress + ":" + port);
+            System.err.println("Detalhes: " + e.getMessage());
+            System.exit(1);
+        } catch (NumberFormatException e) {
+            System.err.println("Erro: A porta deve ser um número válido.");
             System.exit(1);
         }
 
-        GameState gs = new GameState(perguntas);
-        new GUI(gs);
     }
 }
