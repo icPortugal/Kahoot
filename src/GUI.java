@@ -153,14 +153,14 @@ public class GUI extends JFrame {
     }
 
 
-private class ServerListener implements Runnable {
+private class ServerListener implements Runnable { //poderia ser extends thread, mas assim fica mais claro que é uma thread interna
 
         @Override
         public void run() {
             try {
                 Object receivedObject;
                 while (true) {
-                    receivedObject = in.readObject();
+                    receivedObject = in.readObject(); //vê se recebeu algo do servidor
                     if (receivedObject == null) break;
 
                     if (receivedObject instanceof String) {
@@ -171,9 +171,10 @@ private class ServerListener implements Runnable {
                     }
 
                     final Object finalObject = receivedObject;
-                    SwingUtilities.invokeLater(() -> GUI.this.processObject(finalObject));
+                    SwingUtilities.invokeLater(() -> GUI.this.processObject(finalObject)); //manda para a GUI lidar com o objeto
                 }
             } catch (EOFException e) {
+                // Conexão fechada pelo servidor
             } catch (IOException | ClassNotFoundException e) {
                 System.err.println("Erro irrecuperável na Thread de Leitura: " + e.getMessage());
             } finally {
