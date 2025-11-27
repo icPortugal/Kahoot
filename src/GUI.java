@@ -1,22 +1,28 @@
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.*;
 import java.net.Socket;
 import java.util.List;
+import java.util.Map;
 
 public class GUI extends JFrame {
 
     private final ObjectOutputStream out;
     private final ObjectInputStream in;
+
     private final String username;
     private final String teamId;
 
     private JLabel questionLabel;
     private JRadioButton[] options;
     private ButtonGroup optionsGroup;
-    private JLabel scoreLabel;
     private JLabel timeLabel;
+    private JTable scoreTable;
+    private DefaultTableModel tableModel;
+
+    private boolean gameEnded = false;
 
     public GUI(String serverAddress, int port, String username, String teamId) throws IOException {
 
@@ -33,36 +39,52 @@ public class GUI extends JFrame {
             throw new IOException("Falha no envio do login inicial: " + e.getMessage());
         }
 
-        setTitle("IsKahoot Client - " + username);
-        setSize(500, 300);
+        setTitle("Kahoot: " + teamId + " - " + username);
+        setSize(800, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        questionLabel = new JLabel("", SwingConstants.CENTER);
-        questionLabel.setFont(new Font("Arial", Font.PLAIN, 15));
-        add(questionLabel, BorderLayout.NORTH);
+        setLayout(new BorderLayout());
 
+        JPanel leftPanel = new JPanel(new BorderLayout());
+
+        // Pergunta no topo do painel esquerdo
+        questionLabel = new JLabel("A aguardar...", SwingConstants.CENTER);
+        questionLabel.setFont(new Font("Arial", Font.PLAIN, 15));
+        leftPanel.add(questionLabel, BorderLayout.NORTH);
+
+        // Opções
         JPanel optionsPanel = new JPanel(new GridLayout(4, 1, 5, 5));
         options = new JRadioButton[4];
         optionsGroup = new ButtonGroup();
         for (int i = 0; i < 4; i++) {
-            int index = i; // Variável efetivamente final
+            int index = i;
             options[i] = new JRadioButton();
             options[i].setFont(new Font("Arial", Font.PLAIN, 15));
             optionsGroup.add(options[i]);
             optionsPanel.add(options[i]);
             options[i].addActionListener(e -> onOptionSelected(index));
         }
-        add(optionsPanel, BorderLayout.CENTER);
+        optionsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        leftPanel.add(optionsPanel, BorderLayout.CENTER);
 
-        JPanel scoreAndTime = new JPanel(new GridLayout(1, 2));
-        scoreLabel = new JLabel("Pontuação: 0", SwingConstants.CENTER);
+        // Tempo
         timeLabel = new JLabel("Tempo: --", SwingConstants.CENTER);
-        scoreAndTime.add(scoreLabel);
-        scoreAndTime.add(timeLabel);
-        scoreAndTime.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
-        add(scoreAndTime, BorderLayout.SOUTH);
+        timeLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        leftPanel.add(timeLabel, BorderLayout.SOUTH);
 
+        add(leftPanel, BorderLayout.CENTER);
+
+        // Tabela de Pontuações
+        String[] columnNames = {"Team", "Score"};
+        tableModel = new DefaultTableModel(columnNames, 0);
+        scoreTable = new JTable(tableModel);
+        scoreTable.setEnabled(false); // Apenas leitura
+
+        JScrollPane scrollPane = new JScrollPane(scoreTable);
+        scrollPane.setPreferredSize(new Dimension(200, 0)); // Largura da tabela
+
+        add(scrollPane, BorderLayout.EAST);
         new Thread(new ServerListener()).start();
 
         setVisible(true);
@@ -90,22 +112,28 @@ public class GUI extends JFrame {
         optionsGroup.clearSelection();
     }
 
-    
+    private void updateScoreboard(Map<String, Integer> scores) {
+        tableModel.setRowCount(0); // Limpa tabela
+        for (Map.Entry<String, Integer> entry : scores.entrySet()) {
+            tableModel.addRow(new Object[]{entry.getKey(), entry.getValue()});
+        }
+    }
+
     private void processObject(Object obj) {
         if (obj instanceof Question) {
             // Se for um Objeto Question, carrega a pergunta no ecrã.
             loadQuestion((Question) obj);
-        } else if (obj instanceof String) {
+        } else if (obj instanceof Map) {
+            // Se receber um Mapa, atualiza a tabela
+            updateScoreboard((Map<String, Integer>) obj);
+        }
+        else if (obj instanceof String) {
             String command = (String) obj;
-
-            if (command.startsWith("Pontuação:")) {
-                String score = command.substring(command.lastIndexOf(':') + 1).trim();
-                scoreLabel.setText("Pontuação: " + score);
-                JOptionPane.showMessageDialog(this, command);
-            } else if (command.startsWith("GAME_OVER")) {
+            if (command.startsWith("GAME_OVER")) {
                 questionLabel.setText("FIM DO JOGO.");
                 for(JRadioButton opt : options) opt.setEnabled(false);
-                JOptionPane.showMessageDialog(this, command);
+                String whithoutGameOver = command.substring(10); //10=tamanho de "GAME_OVER:"
+                JOptionPane.showMessageDialog(this, whithoutGameOver);
             } else if (command.startsWith("ERRO:")) {
                 JOptionPane.showMessageDialog(this, command, "ERRO", JOptionPane.ERROR_MESSAGE);
             }
@@ -123,6 +151,8 @@ public class GUI extends JFrame {
             JOptionPane.showMessageDialog(this, "Conexão perdida ao enviar resposta.", "Erro de Rede", JOptionPane.ERROR_MESSAGE);
         }
     }
+
+
 private class ServerListener implements Runnable {
 
         @Override
@@ -133,6 +163,13 @@ private class ServerListener implements Runnable {
                     receivedObject = in.readObject();
                     if (receivedObject == null) break;
 
+                    if (receivedObject instanceof String) {
+                        String text = (String) receivedObject;
+                        if (text.startsWith("GAME_OVER")) {
+                            gameEnded = true;
+                        }
+                    }
+
                     final Object finalObject = receivedObject;
                     SwingUtilities.invokeLater(() -> GUI.this.processObject(finalObject));
                 }
@@ -140,8 +177,16 @@ private class ServerListener implements Runnable {
             } catch (IOException | ClassNotFoundException e) {
                 System.err.println("Erro irrecuperável na Thread de Leitura: " + e.getMessage());
             } finally {
+                if (!gameEnded) { // Só mostra erro se o jogo não tiver acabado normalmente
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(GUI.this,
+                                "Conexão perdida com o servidor.",
+                                "Erro de Conexão",
+                                JOptionPane.ERROR_MESSAGE);
+                    });
+                }
+
                 SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(GUI.this, "Fim do jogo ou Conexão perdida. Pontuação final não garantida.", "Fim", JOptionPane.PLAIN_MESSAGE);
                     for (JRadioButton opt : options) opt.setEnabled(false);
                 });
             }

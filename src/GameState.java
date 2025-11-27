@@ -45,7 +45,10 @@ public class GameState {
         return pointsGained;
     }
 
+    public synchronized Map<String, Integer> getScoreboard() {
+        return new ConcurrentHashMap<>(teamScores);
+    }
 
-    public synchronized boolean hasNext() { return currentIndex < questions.size() - 1; }
+    public synchronized boolean hasNext() { return currentIndex < questions.size(); }
 
 }

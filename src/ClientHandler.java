@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.Socket;
+import java.util.Map;
 
 public class ClientHandler extends Thread {
     private Socket connection;
@@ -49,7 +50,7 @@ public class ClientHandler extends Thread {
         this.username = parts[1].trim();
         this.teamId = parts[2].trim();
 
-        // [Cite: 45] O servidor rejeita se o nome já estiver a ser usado.
+        // servidor rejeita se o nome já estiver a ser usado.
         if (gameState.registerPlayer(this.username, this.teamId)) {
             // Envia a primeira pergunta para iniciar o jogo (o Cliente está à espera)
             out.writeObject(gameState.getCurrentQuestion());
@@ -68,16 +69,18 @@ public class ClientHandler extends Thread {
                 int selectedIndex = (int) response;
 
                 int points = gameState.submitAnswer(this.teamId, selectedIndex);
-                out.writeObject("Ganhou " + points + " pontos. Total da equipa: " + gameState.getTeamScore(this.teamId));
+                Map<String, Integer> currentScores = gameState.getScoreboard();
+                out.writeObject(currentScores);
 
                 if (gameState.hasNext()) {
                     out.writeObject(gameState.getCurrentQuestion());
                 } else {
-                    out.writeObject("Fim do jogo: Pontuação Final: " + gameState.getTeamScore(this.teamId));
+                    int pontuacaoFinal = gameState.getTeamScore(this.teamId);
+                    out.writeObject("GAME_OVER:Jogo concluido: A tua equipa conseguiu " + pontuacaoFinal + " pontos.");
                     break;
                 }
             } else {
-                out.writeObject("Resposta inválida.");
+                out.writeObject("ERROR: Resposta inválida.");
             }
         }
     }
