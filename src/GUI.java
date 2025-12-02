@@ -24,6 +24,9 @@ public class GUI extends JFrame {
 
     private boolean gameEnded = false;
 
+    private Timer timer;
+    private int remainingTime;
+
     public GUI(String serverAddress, int port, String username, String teamId) throws IOException {
 
         Socket socket = new Socket(serverAddress, port);
@@ -40,7 +43,7 @@ public class GUI extends JFrame {
         }
 
         setTitle("Kahoot: " + teamId + " - " + username);
-        setSize(800, 400);
+        setSize(700, 350);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -69,11 +72,22 @@ public class GUI extends JFrame {
         leftPanel.add(optionsPanel, BorderLayout.CENTER);
 
         // Tempo
-        timeLabel = new JLabel("Tempo: --", SwingConstants.CENTER);
+        timeLabel = new JLabel("Tempo: ", SwingConstants.CENTER);
         timeLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
         leftPanel.add(timeLabel, BorderLayout.SOUTH);
 
         add(leftPanel, BorderLayout.CENTER);
+
+        //Cronometro
+        timer = new Timer(1000, (ActionEvent e) -> {
+            remainingTime--;
+            timeLabel.setText("Tempo: " + remainingTime + " s");
+            if (remainingTime <= 0) {
+                timer.stop();
+                onOptionSelected(-1); // Indica que o tempo esgotou sem resposta
+            }
+        });
+
 
         // Tabela de Pontuações
         String[] columnNames = {"Team", "Score"};
@@ -85,6 +99,7 @@ public class GUI extends JFrame {
         scrollPane.setPreferredSize(new Dimension(200, 0)); // Largura da tabela
 
         add(scrollPane, BorderLayout.EAST);
+
         new Thread(new ServerListener()).start();
 
         setVisible(true);
@@ -110,6 +125,9 @@ public class GUI extends JFrame {
             }
         }
         optionsGroup.clearSelection();
+        remainingTime = 15;
+        timeLabel.setText("Tempo: " + remainingTime + " s");
+        timer.restart();
     }
 
     private void updateScoreboard(Map<String, Integer> scores) {
@@ -130,6 +148,7 @@ public class GUI extends JFrame {
         else if (obj instanceof String) {
             String command = (String) obj;
             if (command.startsWith("GAME_OVER")) {
+                if (timer.isRunning()) timer.stop();
                 questionLabel.setText("FIM DO JOGO.");
                 for(JRadioButton opt : options) opt.setEnabled(false);
                 String whithoutGameOver = command.substring(10); //10=tamanho de "GAME_OVER:"
@@ -141,6 +160,9 @@ public class GUI extends JFrame {
     }
 
     private void onOptionSelected(int selected) {
+        if (timer.isRunning()) {
+            timer.stop();
+        }
         for (JRadioButton opt : options) {
             opt.setEnabled(false); // Desativa enquanto espera pelo resultado
         }

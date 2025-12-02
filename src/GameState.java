@@ -6,10 +6,16 @@ public class GameState {
 
     private final List<Question> questions;
     private int currentIndex = 0;
+
     private Map<String, String> players = new ConcurrentHashMap<>();
     private Map<String, Integer> teamScores = new ConcurrentHashMap<>();
 
-    public GameState(List<Question> questions) {
+    private final int NUM_PLAYERS; //PERGUNTAR------------------
+    private ModifiedCountDownLatch latch;
+
+    public GameState(List<Question> questions, int numPlayers) {
+        this.NUM_PLAYERS = numPlayers;
+        this.latch = new ModifiedCountDownLatch(2,2,15000, NUM_PLAYERS);
         this.questions = questions;
     }
 
@@ -21,7 +27,6 @@ public class GameState {
         return null;
     }
 
-
     public synchronized boolean registerPlayer(String username, String teamId) {
         if (players.containsKey(username)) {
             return false; // Username já existe
@@ -31,16 +36,33 @@ public class GameState {
         return true;
     }
 
-    public synchronized int submitAnswer(String teamId, int selectedIntex) {
+    public int submitAnswer(String teamId, int selectedIndex) {
+        int questionIndex = currentIndex;
         Question question = getCurrentQuestion();
         if(question == null) return 0;
 
+        int speedFactor = latch.countDown();
+
         int pointsGained = 0;
-        if(question.isCorrect(selectedIntex)) {
-            pointsGained = question.getPoints();
-            teamScores.merge(teamId, pointsGained, Integer::sum);
+        synchronized(this) {
+            if(question.isCorrect(selectedIndex)) {
+                pointsGained = question.getPoints() * speedFactor;
+                teamScores.merge(teamId, pointsGained, Integer::sum);
+            }
         }
-            currentIndex++; //APAGAR NO PONTO 6
+
+        try{
+            latch.await();
+        } catch(Exception e){
+            e.printStackTrace();
+        }
+
+        synchronized (this) {
+            if (questionIndex == currentIndex) { // questao basicamente só é atualiazada uma vez (pelo primeiro a responder)
+                currentIndex++;
+                latch.reset();
+            }
+        }
 
         return pointsGained;
     }
