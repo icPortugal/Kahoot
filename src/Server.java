@@ -8,7 +8,7 @@ public class Server {
 
     public void runServer() {
         List<Question> questions = QuestionLoader.loadFromFile("perguntas.json");
-        this.gameState = new GameState(questions,2);
+        this.gameState = new GameState(questions,4);
 
         try (ServerSocket server = new ServerSocket(PORT)) {
             System.out.println("Servidor IsKahoot a correr na porta " + PORT);

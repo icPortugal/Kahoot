@@ -40,8 +40,9 @@ public class ModifiedCountDownLatch { //desbloqueia uma thread quando o contador
         if (alreadyResponded < bonusCount)
             fator = bonusFactor;
         count--;
-        if (count <= 0)
+        if (count <= 0) {
             notifyAll();
+        }
         return fator; //quem respondeu primeiro tem mais pontos
     }
 

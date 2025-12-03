@@ -15,6 +15,14 @@ public class Main {
         String teamId = args[3];
         String username = args[4];
 
+        try {
+            // Atraso aleatório entre 10ms e 500ms
+            long delay = (long) (Math.random() * 500);
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         // tenta conexão
         try {
             new GUI(serverAddress, port, username, teamId);

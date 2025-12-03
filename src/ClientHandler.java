@@ -72,6 +72,8 @@ public class ClientHandler extends Thread {
                 Map<String, Integer> currentScores = gameState.getScoreboard();
                 out.writeObject(currentScores);
 
+                gameState.waitForNextQuestion();
+
                 if (gameState.hasNext()) {
                     out.writeObject(gameState.getCurrentQuestion());
                 } else {
