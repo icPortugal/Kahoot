@@ -25,7 +25,7 @@ public class Main {
 
         // tenta conexão
         try {
-            new GUI(serverAddress, port, username, teamId);
+            new GUI(serverAddress, port, gameCode, username, teamId);
         } catch (IOException e) {
             System.err.println("Erro ao conectar ao servidor em " + serverAddress + ":" + port);
             System.err.println("Detalhes: " + e.getMessage());

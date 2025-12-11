@@ -27,7 +27,7 @@ public class GUI extends JFrame {
     private Timer timer;
     private int remainingTime;
 
-    public GUI(String serverAddress, int port, String username, String teamId) throws IOException {
+    public GUI(String serverAddress, int port, String gameCode, String username, String teamId) throws IOException {
 
         Socket socket = new Socket(serverAddress, port);
         this.out = new ObjectOutputStream(socket.getOutputStream());
@@ -36,7 +36,7 @@ public class GUI extends JFrame {
         this.teamId = teamId;
 
         try {
-            this.out.writeObject(new String[]{"JOGO_1", this.username, this.teamId});
+            this.out.writeObject(new String[]{gameCode, this.username, this.teamId});
             this.out.flush();
         } catch (IOException e) {
             throw new IOException("Falha no envio do login inicial: " + e.getMessage());
@@ -90,7 +90,7 @@ public class GUI extends JFrame {
 
 
         // Tabela de Pontuações
-        String[] columnNames = {"Team", "Score"};
+        String[] columnNames = {"Team", "Score", "Last Round Score"};
         tableModel = new DefaultTableModel(columnNames, 0);
         scoreTable = new JTable(tableModel);
         scoreTable.setEnabled(false); // Apenas leitura
@@ -130,10 +130,15 @@ public class GUI extends JFrame {
         timer.restart();
     }
 
-    private void updateScoreboard(Map<String, Integer> scores) {
+    private void updateScoreboard(Map<String, Integer> totalScores, Map<String, Integer> roundScore) {
         tableModel.setRowCount(0); // Limpa tabela
-        for (Map.Entry<String, Integer> entry : scores.entrySet()) {
-            tableModel.addRow(new Object[]{entry.getKey(), entry.getValue()});
+
+        for (Map.Entry<String, Integer> entry : totalScores.entrySet()) {
+            String team = entry.getKey();
+            int totalScore = entry.getValue();
+            int round = roundScore.getOrDefault(team, 0);
+
+            tableModel.addRow(new Object[]{team, totalScore, round});
         }
     }
 
@@ -141,9 +146,17 @@ public class GUI extends JFrame {
         if (obj instanceof Question) {
             // Se for um Objeto Question, carrega a pergunta no ecrã.
             loadQuestion((Question) obj);
-        } else if (obj instanceof Map) {
-            // Se receber um Mapa, atualiza a tabela
-            updateScoreboard((Map<String, Integer>) obj);
+        } else if (obj instanceof Object[]) {
+            // Se receber um Object[], atualiza a tabela
+            Object[] scores = (Object[]) obj;
+            if (scores.length == 2 && scores[0] instanceof Map && scores[1] instanceof Map) {
+                Map<String, Integer> totalScores = (Map<String, Integer>) scores[0];
+                Map<String, Integer> roundScores = (Map<String, Integer>) scores[1];
+
+                updateScoreboard(totalScores, roundScores);
+            } else {
+                System.err.println("Formato de pontuação inválido para o placar.");
+            }
         }
         else if (obj instanceof String) {
             String command = (String) obj;

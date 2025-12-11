@@ -9,6 +9,7 @@ public class GameState {
 
     private Map<String, String> players = new ConcurrentHashMap<>();
     private Map<String, Integer> teamScores = new ConcurrentHashMap<>();
+    private Map<String, Integer> roundScores = new ConcurrentHashMap<>();
 
     private final int NUM_PLAYERS;
     private ModifiedCountDownLatch latch; //para perguntas individuais
@@ -33,6 +34,10 @@ public class GameState {
         return null;
     }
 
+    public synchronized Map<String, Integer> getRoundScores() {
+        return new ConcurrentHashMap<>(roundScores);
+    }
+
     public synchronized boolean registerPlayer(String username, String teamId) {
         if (players.containsKey(username) || players.size() >= NUM_PLAYERS) {
             return false;
@@ -40,6 +45,11 @@ public class GameState {
         players.put(username, teamId);
         teamScores.putIfAbsent(teamId, 0); // Inicializa a pontuação da equipa
         return true;
+    }
+
+    private synchronized void updateScores(String teamId, int pointsGained) {
+        teamScores.merge(teamId, pointsGained, Integer::sum);
+        roundScores.merge(teamId, pointsGained, Integer::sum);
     }
 
     public int submitAnswer(String teamId, int selectedIndex) {
@@ -58,12 +68,15 @@ public class GameState {
     private int submitIndividualAnswer(String teamId, int selectedIndex, Question currentQuestion, int currentIndex) {
         int speedFactor = latch.countDown();
         int pointsGained = 0;
-        synchronized(this) {
-            if(currentQuestion.isCorrect(selectedIndex)) {
-                pointsGained = currentQuestion.getPoints() * speedFactor;
-                teamScores.merge(teamId, pointsGained, Integer::sum);
-            }
+
+        if(currentQuestion.isCorrect(selectedIndex)) {
+            pointsGained = currentQuestion.getPoints() * speedFactor;
         }
+
+        synchronized(this) {
+            updateScores(teamId, pointsGained);
+        }
+
         try{
             latch.await();
         } catch(Exception e) { e.printStackTrace();}
@@ -85,7 +98,7 @@ public class GameState {
         String roundKey = teamId + "_" + currentIndex;
         if(processedTeamRounds.putIfAbsent(roundKey, true) == null) {
             synchronized (this) {
-                teamScores.merge(teamId, teamPoints, Integer::sum);
+                updateScores(teamId, teamPoints);
             }
         }
 
@@ -106,6 +119,7 @@ public class GameState {
             playersFinished = 0;
             latch.reset();
             processedTeamRounds.clear();
+            roundScores.clear();
 
             notifyAll();
         }
@@ -116,4 +130,17 @@ public class GameState {
 
     public synchronized boolean hasNext() { return currentIndex < questions.size(); }
 
+    // para o GameRunner esperar pelo fim do jogo
+    // bloqueia a thread até o currentIndex atingir o fim da lista de perguntas
+    public void runGameLoop() {
+        while(hasNext()){
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+
+        }
+    }
 }
