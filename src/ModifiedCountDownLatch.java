@@ -16,10 +16,6 @@ public class ModifiedCountDownLatch {
         this.waitPeriod = waitPeriod;
     }
 
-    public synchronized int getCount() {
-        return count;
-    }
-
     public synchronized void await () throws InterruptedException {
         long startTime = System.currentTimeMillis();
         long timeToWait = waitPeriod;

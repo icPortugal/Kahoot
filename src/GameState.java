@@ -176,7 +176,4 @@ public class GameState {
         }
     }
 
-    public synchronized boolean isRoundCoordinationFinished() {
-        return latch.getCount() <= 0;
-    }
 }
