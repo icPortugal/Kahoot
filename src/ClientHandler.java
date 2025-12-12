@@ -62,7 +62,7 @@ public class ClientHandler extends Thread {
         }
 
         // servidor rejeita se o nome já estiver a ser usado
-        if (gameState.registerPlayer(this.username, this.teamId)) {
+        if (gameState.registerPlayer(this.username, this.teamId, this)) {
             // envia a primeira pergunta para iniciar o jogo (o cliente está à espera)
             out.writeObject(gameState.getCurrentQuestion());
             return true;
@@ -80,12 +80,6 @@ public class ClientHandler extends Thread {
                 int selectedIndex = (int) response;
 
                 gameState.submitAnswer(this.teamId, selectedIndex);
-
-                Map<String, Integer> currentScores = gameState.getScoreboard();
-                Map<String, Integer> roundScores = gameState.getRoundScores();
-
-                Object[] scoreUpdate = new Object[] {currentScores, roundScores};
-                out.writeObject(scoreUpdate);
 
                 gameState.waitForNextQuestion();
 
@@ -110,5 +104,9 @@ public class ClientHandler extends Thread {
         } catch (IOException e) {
             System.err.println("Erro ao fechar conexão para " + username);
         }
+    }
+
+    public synchronized void sendObject(Object obj) throws  IOException {
+        out.writeObject(obj);
     }
 }

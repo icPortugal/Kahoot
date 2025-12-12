@@ -1,6 +1,8 @@
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameState {
 
@@ -20,10 +22,38 @@ public class GameState {
     private int playersFinished = 0;
     private Map<String, Boolean> processedTeamRounds = new ConcurrentHashMap<>(); // para só um jogador de cada equipa conseguir registar o valor da ronda anterior
 
+    private final List<ClientHandler> connectedHandlers = new CopyOnWriteArrayList<>();
+
     public GameState(List<Question> questions, int numPlayers) {
         this.NUM_PLAYERS = numPlayers;
         this.latch = new ModifiedCountDownLatch(2,2,30000, NUM_PLAYERS);
         this.questions = questions;
+    }
+
+    public synchronized boolean registerPlayer(String username, String teamId, ClientHandler handler) {
+        if (players.containsKey(username) || players.size() >= NUM_PLAYERS) {
+            return false;
+        }
+
+        players.put(username, teamId);
+        teamScores.putIfAbsent(teamId, 0);
+        connectedHandlers.add(handler);
+        return true;
+    }
+
+    public void sendScoreBoardBroadcast() {
+        Map<String, Integer> totalScores = getScoreboard();
+        Map<String, Integer> roundScores = getRoundScores();
+        Object[] scoreboardData = new Object[] {totalScores, roundScores};
+
+        for (ClientHandler handler : connectedHandlers) {
+            try {
+                handler.sendObject(scoreboardData);
+            } catch (IOException e) {
+                System.err.println("Erro ao enviar placar para cliente " + handler.getName());
+                connectedHandlers.remove(handler);
+            }
+        }
     }
 
     public synchronized int getTeamScore(String teamId) {
@@ -108,13 +138,9 @@ public class GameState {
     public synchronized void waitForNextQuestion() {
         playersFinished++;
 
-        if (playersFinished < NUM_PLAYERS) {
-            try {
-                wait(); // fica a dormir DEPOIS de ter recebido os pontos na GUI
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        } else {
+        if (playersFinished == NUM_PLAYERS) {
+            sendScoreBoardBroadcast();
+
             currentIndex++;
             playersFinished = 0;
             latch.reset();
@@ -122,6 +148,13 @@ public class GameState {
             roundScores.clear();
 
             notifyAll();
+
+        } else {
+            try {
+                wait(); // fica a dormir DEPOIS de ter recebido os pontos na GUI
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
     public synchronized Map<String, Integer> getScoreboard() {
@@ -141,5 +174,9 @@ public class GameState {
             }
 
         }
+    }
+
+    public synchronized boolean isRoundCoordinationFinished() {
+        return latch.getCount() <= 0;
     }
 }
