@@ -9,11 +9,11 @@ public class TeamBarrier {
     private final int totalPlayers;
     private final long timeoutMillis;
 
-    private int count; // quantos ainda não chegaram
+    private int count;
     private int round = 0;
 
-    private List<Integer> currentAnswers; // respostas da equipa na ronda atual
-    private List<Boolean> currentCorrectness; // se as respostas estão corretas
+    private List<Integer> currentAnswers;
+    private List<Boolean> currentCorrectness;
 
     private int roundTeamScore = 0;
 
@@ -42,7 +42,7 @@ public class TeamBarrier {
             } else {
                 long timeout= TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
                 while (count > 0 && currentRound == this.round && timeout > 0) {
-                    timeout = allArrived.awaitNanos(timeout); //assim mesmo que algum jogador vá a baixo nao ficam todos á espera
+                    timeout = allArrived.awaitNanos(timeout); // assim mesmo que algum jogador vá a baixo não ficam todos à espera
                 }
                 if (currentRound == this.round && count > 0) { // timeout ocorreu
                     calculateRoundScore(); // calcula com quem está presente
@@ -63,7 +63,7 @@ public class TeamBarrier {
         boolean allCorrect = true;
         for(int i = 0; i < currentCorrectness.size(); i++) {
             if (!currentCorrectness.get(i))
-                allCorrect = false; // exemplo: cada resposta correta vale 10 pontos
+                allCorrect = false;
             else {
                 if (currentAnswers.get(i) > maxScore)
                     maxScore = currentAnswers.get(i);

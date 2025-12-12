@@ -10,7 +10,6 @@ public class GameManager {
     private final Map<String, GameState> activeGames = new ConcurrentHashMap<>();
     private final List<Question> availableQuestions;
 
-    // gera códigos únicos para os jogos
     private final AtomicInteger gameCodeGenerator = new AtomicInteger(1);
 
     // threadpool para limitar a execução dos jogos
@@ -22,7 +21,6 @@ public class GameManager {
         this.gameThreadPool = Executors.newFixedThreadPool(MAX_CONCURRENT_GAMES);
     }
 
-    // podemos colocar também o número de perguntas
     public String createNewGame(int numTeams, int numPlayers) {
         int totalPlayers = numTeams * numPlayers;
         String gameCode = String.valueOf(gameCodeGenerator.getAndIncrement());

@@ -14,11 +14,11 @@ public class GameState {
     private final int NUM_PLAYERS;
     private ModifiedCountDownLatch latch; //para perguntas individuais
 
-    //para perguntas em grupo
+    // para perguntas em grupo
     private Map<String, TeamBarrier> teamBarriers = new ConcurrentHashMap<>();
     private final int NUM_PLAYERS_PER_TEAM = 2;
     private int playersFinished = 0;
-    private Map<String, Boolean> processedTeamRounds = new ConcurrentHashMap<>(); //para só um jogador de cada equipa conseguir registar o valor da ronda anterior
+    private Map<String, Boolean> processedTeamRounds = new ConcurrentHashMap<>(); // para só um jogador de cada equipa conseguir registar o valor da ronda anterior
 
     public GameState(List<Question> questions, int numPlayers) {
         this.NUM_PLAYERS = numPlayers;
@@ -29,7 +29,7 @@ public class GameState {
     public synchronized int getTeamScore(String teamId) {
         return teamScores.getOrDefault(teamId, 0);
     }
-    public synchronized Question getCurrentQuestion() { //para não haver misturas de indices entre threads
+    public synchronized Question getCurrentQuestion() { // para não haver misturas de índices entre threads
         if(currentIndex >= 0 && currentIndex < questions.size()) return questions.get(currentIndex);
         return null;
     }
@@ -43,7 +43,7 @@ public class GameState {
             return false;
         }
         players.put(username, teamId);
-        teamScores.putIfAbsent(teamId, 0); // Inicializa a pontuação da equipa
+        teamScores.putIfAbsent(teamId, 0); // inicializa a pontuação da equipa
         return true;
     }
 
@@ -56,8 +56,8 @@ public class GameState {
         Question currentQuestion = getCurrentQuestion();
         if (currentQuestion == null) return 0;
 
-        int currentIndex = this.currentIndex; //para usar na barreira
-        boolean isIndividualQuestion = (currentIndex % 2 == 0); // perguntas individuais são as de índice par
+        int currentIndex = this.currentIndex; // para usar na barreira
+        boolean isIndividualQuestion = (currentIndex % 2 == 0);
         if(isIndividualQuestion) {
             return submitIndividualAnswer(teamId, selectedIndex, currentQuestion,currentIndex);
         }else{
@@ -94,7 +94,7 @@ public class GameState {
             teamPoints = barrier.await(pointsGained, isCorrect);
         } catch (InterruptedException e) { e.printStackTrace();}
 
-        // para nao dar para jogadores da mesma equipa registarem pontuaçoes para rondas diferentes
+        // para não dar para jogadores da mesma equipa registarem pontuações para rondas diferentes
         String roundKey = teamId + "_" + currentIndex;
         if(processedTeamRounds.putIfAbsent(roundKey, true) == null) {
             synchronized (this) {
@@ -130,7 +130,6 @@ public class GameState {
 
     public synchronized boolean hasNext() { return currentIndex < questions.size(); }
 
-    // para o GameRunner esperar pelo fim do jogo
     // bloqueia a thread até o currentIndex atingir o fim da lista de perguntas
     public void runGameLoop() {
         while(hasNext()){

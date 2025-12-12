@@ -1,8 +1,8 @@
 import java.util.concurrent.CountDownLatch;
-public class ModifiedCountDownLatch { //desbloqueia uma thread quando o contador chega a zero
-    private int count; //nº de respostas esperadas = nº threads a esperar
+public class ModifiedCountDownLatch {
+    private int count;
     private final int initialCount;
-    private int round = 0; //por causa do reset que pode ser chamado enquanto threads estão à espera
+    private int round = 0;
 
     private final int bonusFactor;
     private final int bonusCount;
@@ -10,9 +10,9 @@ public class ModifiedCountDownLatch { //desbloqueia uma thread quando o contador
 
     public ModifiedCountDownLatch(int bonusFactor, int bonusCount, int waitPeriod, int count) {
         this.count = count;
-        this.initialCount = count; // para o reset
+        this.initialCount = count;
         this.bonusFactor = bonusFactor;
-        this.bonusCount = bonusCount; //nº de respostas que recebem bónus
+        this.bonusCount = bonusCount;
         this.waitPeriod = waitPeriod;
     }
 
@@ -43,7 +43,7 @@ public class ModifiedCountDownLatch { //desbloqueia uma thread quando o contador
         if (count <= 0) {
             notifyAll();
         }
-        return fator; //quem respondeu primeiro tem mais pontos
+        return fator;
     }
 
     public synchronized void reset(){

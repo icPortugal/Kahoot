@@ -51,12 +51,10 @@ public class GUI extends JFrame {
 
         JPanel leftPanel = new JPanel(new BorderLayout());
 
-        // Pergunta no topo do painel esquerdo
         questionLabel = new JLabel("A aguardar...", SwingConstants.CENTER);
         questionLabel.setFont(new Font("Arial", Font.PLAIN, 15));
         leftPanel.add(questionLabel, BorderLayout.NORTH);
 
-        // Opções
         JPanel optionsPanel = new JPanel(new GridLayout(4, 1, 5, 5));
         options = new JRadioButton[4];
         optionsGroup = new ButtonGroup();
@@ -71,32 +69,28 @@ public class GUI extends JFrame {
         optionsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         leftPanel.add(optionsPanel, BorderLayout.CENTER);
 
-        // Tempo
         timeLabel = new JLabel("Tempo: ", SwingConstants.CENTER);
         timeLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
         leftPanel.add(timeLabel, BorderLayout.SOUTH);
 
         add(leftPanel, BorderLayout.CENTER);
 
-        //Cronometro
         timer = new Timer(1000, (ActionEvent e) -> {
             remainingTime--;
             timeLabel.setText("Tempo: " + remainingTime + " s");
             if (remainingTime <= 0) {
                 timer.stop();
-                onOptionSelected(-1); // Indica que o tempo esgotou sem resposta
+                 onOptionSelected(-1); // indica que o tempo esgotou sem resposta
             }
         });
 
-
-        // Tabela de Pontuações
         String[] columnNames = {"Team", "Score", "Last Round Score"};
         tableModel = new DefaultTableModel(columnNames, 0);
         scoreTable = new JTable(tableModel);
-        scoreTable.setEnabled(false); // Apenas leitura
+        scoreTable.setEnabled(false);
 
         JScrollPane scrollPane = new JScrollPane(scoreTable);
-        scrollPane.setPreferredSize(new Dimension(200, 0)); // Largura da tabela
+        scrollPane.setPreferredSize(new Dimension(200, 0));
 
         add(scrollPane, BorderLayout.EAST);
 
@@ -118,7 +112,7 @@ public class GUI extends JFrame {
             if (i < opts.size()) {
                 options[i].setText(opts.get(i));
                 options[i].setVisible(true);
-                options[i].setEnabled(true); // Reativa os botões
+                options[i].setEnabled(true); // reativa os botões
             } else {
                 options[i].setVisible(false);
                 options[i].setEnabled(false);
@@ -131,7 +125,7 @@ public class GUI extends JFrame {
     }
 
     private void updateScoreboard(Map<String, Integer> totalScores, Map<String, Integer> roundScore) {
-        tableModel.setRowCount(0); // Limpa tabela
+        tableModel.setRowCount(0); // limpa tabela
 
         for (Map.Entry<String, Integer> entry : totalScores.entrySet()) {
             String team = entry.getKey();
@@ -144,10 +138,10 @@ public class GUI extends JFrame {
 
     private void processObject(Object obj) {
         if (obj instanceof Question) {
-            // Se for um Objeto Question, carrega a pergunta no ecrã.
+            // se for um objeto Question, carrega a pergunta no ecrã.
             loadQuestion((Question) obj);
         } else if (obj instanceof Object[]) {
-            // Se receber um Object[], atualiza a tabela
+            // se receber um Object[], atualiza a tabela
             Object[] scores = (Object[]) obj;
             if (scores.length == 2 && scores[0] instanceof Map && scores[1] instanceof Map) {
                 Map<String, Integer> totalScores = (Map<String, Integer>) scores[0];
@@ -164,7 +158,7 @@ public class GUI extends JFrame {
                 if (timer.isRunning()) timer.stop();
                 questionLabel.setText("FIM DO JOGO.");
                 for(JRadioButton opt : options) opt.setEnabled(false);
-                String whithoutGameOver = command.substring(10); //10=tamanho de "GAME_OVER:"
+                String whithoutGameOver = command.substring(10);
                 JOptionPane.showMessageDialog(this, whithoutGameOver);
             } else if (command.startsWith("ERRO:")) {
                 JOptionPane.showMessageDialog(this, command, "ERRO", JOptionPane.ERROR_MESSAGE);
@@ -177,7 +171,7 @@ public class GUI extends JFrame {
             timer.stop();
         }
         for (JRadioButton opt : options) {
-            opt.setEnabled(false); // Desativa enquanto espera pelo resultado
+            opt.setEnabled(false);
         }
         try {
             this.out.writeObject(Integer.valueOf(selected));
@@ -188,14 +182,14 @@ public class GUI extends JFrame {
     }
 
 
-private class ServerListener implements Runnable { //poderia ser extends thread, mas assim fica mais claro que é uma thread interna
+private class ServerListener implements Runnable {
 
         @Override
         public void run() {
             try {
                 Object receivedObject;
                 while (true) {
-                    receivedObject = in.readObject(); //vê se recebeu algo do servidor
+                    receivedObject = in.readObject();
                     if (receivedObject == null) break;
 
                     if (receivedObject instanceof String) {
@@ -206,14 +200,14 @@ private class ServerListener implements Runnable { //poderia ser extends thread,
                     }
 
                     final Object finalObject = receivedObject;
-                    SwingUtilities.invokeLater(() -> GUI.this.processObject(finalObject)); //manda para a GUI lidar com o objeto
+                    SwingUtilities.invokeLater(() -> GUI.this.processObject(finalObject));
                 }
             } catch (EOFException e) {
-                // Conexão fechada pelo servidor
+                // conexão fechada pelo servidor
             } catch (IOException | ClassNotFoundException e) {
                 System.err.println("Erro irrecuperável na Thread de Leitura: " + e.getMessage());
             } finally {
-                if (!gameEnded) { // Só mostra erro se o jogo não tiver acabado normalmente
+                if (!gameEnded) {
                     SwingUtilities.invokeLater(() -> {
                         JOptionPane.showMessageDialog(GUI.this,
                                 "Conexão perdida com o servidor.",

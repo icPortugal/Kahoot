@@ -63,7 +63,7 @@ public class ClientHandler extends Thread {
 
         // servidor rejeita se o nome já estiver a ser usado
         if (gameState.registerPlayer(this.username, this.teamId)) {
-            // Envia a primeira pergunta para iniciar o jogo (o Cliente está à espera)
+            // envia a primeira pergunta para iniciar o jogo (o cliente está à espera)
             out.writeObject(gameState.getCurrentQuestion());
             return true;
         } else {

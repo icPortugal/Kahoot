@@ -13,7 +13,6 @@ public class GameRunner implements Runnable {
     public void run() {
         System.out.println("Jogo " + gameCode + " a iniciar execução.");
 
-        // espera até que o jogo termine
         gameState.runGameLoop();
 
         System.out.println("Jogo " + gameCode + " finalizado!");
