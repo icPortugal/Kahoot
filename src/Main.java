@@ -15,9 +15,15 @@ public class Main {
         String teamId = args[3];
         String username = args[4];
 
-        // tenta conexão
         try {
-            new GUI(serverAddress, port, username, teamId);
+            long delay = (long) (Math.random() * 500);
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        try {
+            new GUI(serverAddress, port, gameCode, username, teamId);
         } catch (IOException e) {
             System.err.println("Erro ao conectar ao servidor em " + serverAddress + ":" + port);
             System.err.println("Detalhes: " + e.getMessage());

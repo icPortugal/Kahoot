@@ -1,10 +1,13 @@
 import java.io.*;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.Map;
 
 public class ClientHandler extends Thread {
     private Socket connection;
     private GameState gameState;
+    private GameManager gameManager;
+    private String gameCode;
 
     private ObjectOutputStream out;
     private ObjectInputStream in;
@@ -12,10 +15,11 @@ public class ClientHandler extends Thread {
     private String teamId;
     private String username;
 
-    public ClientHandler(Socket connection, GameState gameState) {
+    public ClientHandler(Socket connection, GameManager gameManager) {
         this.connection = connection;
-        this.gameState = gameState;
+        this.gameManager = gameManager;
     }
+
     @Override
     public void run() {
         try {
@@ -23,7 +27,7 @@ public class ClientHandler extends Thread {
             in = new ObjectInputStream(connection.getInputStream());
 
             if (!handleLogin()) {
-                out.writeObject("Falha no registo (username repetido ou equipa inválida).");
+                out.writeObject("Falha no registo (username repetido, jogo inexistente ou equipa inválida).");
                 return;
             }
 
@@ -47,12 +51,19 @@ public class ClientHandler extends Thread {
         }
 
         String[] parts = (String[]) received;
+        this.gameCode = parts[0].trim();
         this.username = parts[1].trim();
         this.teamId = parts[2].trim();
 
-        // servidor rejeita se o nome já estiver a ser usado.
-        if (gameState.registerPlayer(this.username, this.teamId)) {
-            // Envia a primeira pergunta para iniciar o jogo (o Cliente está à espera)
+        this.gameState = gameManager.getGame(this.gameCode);
+        if (this.gameState == null) {
+            System.out.println("Cliente " + username + " rejeitado: Jogo " + gameCode + " não existe.");
+            return false;
+        }
+
+        // servidor rejeita se o nome já estiver a ser usado
+        if (gameState.registerPlayer(this.username, this.teamId, this)) {
+            // envia a primeira pergunta para iniciar o jogo (o cliente está à espera)
             out.writeObject(gameState.getCurrentQuestion());
             return true;
         } else {
@@ -67,16 +78,28 @@ public class ClientHandler extends Thread {
 
             if (response instanceof Integer) {
                 int selectedIndex = (int) response;
+                gameState.submitAnswer(this.teamId, selectedIndex);
 
-                int points = gameState.submitAnswer(this.teamId, selectedIndex);
-                Map<String, Integer> currentScores = gameState.getScoreboard();
-                out.writeObject(currentScores);
+                Map<String, Integer> totalScores = gameState.getScoreboard();
+                Map<String, Integer> roundScores = gameState.getRoundScores();
+
+                Object[] scoreUpdate = new Object[]{totalScores, roundScores};
+
+                // Enviar atualização de pontuação para as GUIs
+                out.writeObject(scoreUpdate);
+                out.flush(); //envia logo o que está no buffer
+                out.reset();
+
+                gameState.waitForNextQuestion();
 
                 if (gameState.hasNext()) {
                     out.writeObject(gameState.getCurrentQuestion());
+                    out.flush();
+                    out.reset();
                 } else {
                     int pontuacaoFinal = gameState.getTeamScore(this.teamId);
-                    out.writeObject("GAME_OVER:Jogo concluido: A tua equipa conseguiu " + pontuacaoFinal + " pontos.");
+                    out.writeObject("GAME_OVER: Jogo concluido: A tua equipa conseguiu " + pontuacaoFinal + " pontos.");
+                    out.flush();
                     break;
                 }
             } else {
@@ -93,5 +116,9 @@ public class ClientHandler extends Thread {
         } catch (IOException e) {
             System.err.println("Erro ao fechar conexão para " + username);
         }
+    }
+
+    public synchronized void sendObject(Object obj) throws  IOException {
+        out.writeObject(obj);
     }
 }
