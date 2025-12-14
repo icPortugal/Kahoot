@@ -78,16 +78,28 @@ public class ClientHandler extends Thread {
 
             if (response instanceof Integer) {
                 int selectedIndex = (int) response;
-
                 gameState.submitAnswer(this.teamId, selectedIndex);
+
+                Map<String, Integer> totalScores = gameState.getScoreboard();
+                Map<String, Integer> roundScores = gameState.getRoundScores();
+
+                Object[] scoreUpdate = new Object[]{totalScores, roundScores};
+
+                // Enviar atualização de pontuação para as GUIs
+                out.writeObject(scoreUpdate);
+                out.flush(); //envia logo o que está no buffer
+                out.reset();
 
                 gameState.waitForNextQuestion();
 
                 if (gameState.hasNext()) {
                     out.writeObject(gameState.getCurrentQuestion());
+                    out.flush();
+                    out.reset();
                 } else {
                     int pontuacaoFinal = gameState.getTeamScore(this.teamId);
                     out.writeObject("GAME_OVER: Jogo concluido: A tua equipa conseguiu " + pontuacaoFinal + " pontos.");
+                    out.flush();
                     break;
                 }
             } else {

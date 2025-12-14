@@ -40,9 +40,12 @@ public class TeamBarrier {
                 resetForNextRound();
                 return roundTeamScore;
             } else {
-                long timeout= TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
-                while (count > 0 && currentRound == this.round && timeout > 0) {
-                    timeout = allArrived.awaitNanos(timeout); // assim mesmo que algum jogador vá a baixo não ficam todos à espera
+                long startTime = System.currentTimeMillis();
+                long timeToWait = timeoutMillis;
+                while (count > 0 && currentRound == this.round && timeToWait > 0) {
+                    allArrived.await(timeToWait, TimeUnit.MILLISECONDS);
+                    long elapsedTime = System.currentTimeMillis() - startTime;
+                    timeToWait = timeoutMillis - elapsedTime;
                 }
                 if (currentRound == this.round && count > 0) { // timeout ocorreu
                     calculateRoundScore(); // calcula com quem está presente

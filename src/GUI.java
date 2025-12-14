@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.*;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -138,7 +139,6 @@ public class GUI extends JFrame {
 
     private void processObject(Object obj) {
         if (obj instanceof Question) {
-            // se for um objeto Question, carrega a pergunta no ecrã.
             loadQuestion((Question) obj);
         } else if (obj instanceof Object[]) {
             // se receber um Object[], atualiza a tabela
@@ -152,13 +152,18 @@ public class GUI extends JFrame {
                 System.err.println("Formato de pontuação inválido para o placar.");
             }
         }
+        else if (obj instanceof Map) {
+            Map<String, Integer> totalScores = (Map<String, Integer>) obj;
+            updateScoreboard(totalScores, new HashMap<>());
+        }
+
         else if (obj instanceof String) {
             String command = (String) obj;
             if (command.startsWith("GAME_OVER")) {
                 if (timer.isRunning()) timer.stop();
-                questionLabel.setText("FIM DO JOGO.");
+                questionLabel.setText("Fim do jogo.");
                 for(JRadioButton opt : options) opt.setEnabled(false);
-                String whithoutGameOver = command.substring(10);
+                String whithoutGameOver = command .substring(10);
                 JOptionPane.showMessageDialog(this, whithoutGameOver);
             } else if (command.startsWith("ERRO:")) {
                 JOptionPane.showMessageDialog(this, command, "ERRO", JOptionPane.ERROR_MESSAGE);

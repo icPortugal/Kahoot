@@ -140,15 +140,12 @@ public class GameState {
 
         if (playersFinished == NUM_PLAYERS) {
             sendScoreBoardBroadcast();
-
             currentIndex++;
             playersFinished = 0;
             latch.reset();
             processedTeamRounds.clear();
             roundScores.clear();
-
             notifyAll();
-
         } else {
             try {
                 wait(); // fica a dormir DEPOIS de ter recebido os pontos na GUI
@@ -172,8 +169,6 @@ public class GameState {
                 Thread.currentThread().interrupt();
                 break;
             }
-
         }
     }
-
 }
